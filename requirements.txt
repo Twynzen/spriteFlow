@@ -1,0 +1,25 @@
+# SpriteFlow Requirements
+# AI-powered sprite animation pipeline
+
+# Deep Learning Framework
+torch==2.0.1
+torchvision==0.15.2
+
+# Image Processing
+opencv-python==4.8.1.78
+Pillow==10.1.0
+
+# Background Removal
+rembg[gpu]==2.0.50
+
+# ONNX Runtime (para rembg)
+onnxruntime-gpu==1.16.3
+
+# Utilities
+numpy==1.24.3
+tqdm==4.66.1
+requests==2.31.0
+
+# Optional: Para desarrollo/testing
+pytest==7.4.3
+black==23.12.0

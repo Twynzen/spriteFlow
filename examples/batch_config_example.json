@@ -1,0 +1,34 @@
+{
+  "rembg_model": "u2net",
+  "rife_model": "train_log/flownet.pkl",
+  "animations": [
+    {
+      "name": "walk_right",
+      "start": "examples/inputs/walk_right_start.png",
+      "end": "examples/inputs/walk_right_end.png",
+      "frames": 30,
+      "remove_bg": true
+    },
+    {
+      "name": "walk_diagonal",
+      "start": "examples/inputs/walk_diagonal_start.png",
+      "end": "examples/inputs/walk_diagonal_end.png",
+      "frames": 30,
+      "remove_bg": true
+    },
+    {
+      "name": "attack",
+      "start": "examples/inputs/attack_start.png",
+      "end": "examples/inputs/attack_end.png",
+      "frames": 30,
+      "remove_bg": true
+    },
+    {
+      "name": "idle",
+      "start": "examples/inputs/idle_start.png",
+      "end": "examples/inputs/idle_end.png",
+      "frames": 15,
+      "remove_bg": true
+    }
+  ]
+}
