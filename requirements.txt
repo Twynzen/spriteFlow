@@ -10,9 +10,9 @@ opencv-python==4.8.1.78
 Pillow==10.1.0
 
 # Background Removal
-rembg[gpu]==2.0.50
+rembg==2.0.50
 
-# ONNX Runtime (para rembg)
+# ONNX Runtime GPU (para rembg con aceleración GPU)
 onnxruntime-gpu==1.16.3
 
 # Utilities

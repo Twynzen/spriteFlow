@@ -17,12 +17,14 @@ import torch
 import argparse
 from rembg import remove, new_session
 
-# Importar RIFE (asume que está en /workspace/Practical-RIFE)
-sys.path.insert(0, '/workspace/Practical-RIFE')
+# Importar RIFE (detectar path automáticamente)
+script_dir = Path(__file__).parent.parent.resolve()
+rife_path = script_dir / 'Practical-RIFE'
+sys.path.insert(0, str(rife_path))
 from model.RIFE_HD import Model
 
 class SpriteAnimationPipeline:
-    def __init__(self, rife_model_path='train_log/flownet.pkl',
+    def __init__(self, rife_model_path=None,
                  rembg_model='u2net', device='cuda'):
         """
         Inicializar pipeline con modelos pre-cargados
@@ -34,6 +36,18 @@ class SpriteAnimationPipeline:
         """
         self.device = device
         print(f"🚀 Inicializando SpriteFlow pipeline en {device}...")
+
+        # Auto-detectar path del modelo RIFE si no se proporciona
+        if rife_model_path is None:
+            rife_model_path = str(rife_path / 'train_log' / 'flownet.pkl')
+            print(f"📍 Auto-detectado modelo RIFE: {rife_model_path}")
+
+        # Verificar que el modelo existe
+        if not os.path.exists(rife_model_path):
+            raise FileNotFoundError(
+                f"❌ Modelo RIFE no encontrado en: {rife_model_path}\n"
+                f"   Descárgalo desde: https://github.com/hzwer/Practical-RIFE/releases/download/4.26/flownet-v4.26.pkl"
+            )
 
         # Cargar RIFE
         print("📦 Cargando RIFE...")
@@ -246,8 +260,8 @@ def main():
     parser.add_argument('--rembg-model', default='u2net',
                        choices=['u2net', 'isnet-anime', 'birefnet-general'],
                        help='rembg model to use')
-    parser.add_argument('--rife-model', default='train_log/flownet.pkl',
-                       help='Path to RIFE model')
+    parser.add_argument('--rife-model', default=None,
+                       help='Path to RIFE model (default: auto-detect)')
 
     args = parser.parse_args()
 

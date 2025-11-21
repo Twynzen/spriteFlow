@@ -12,6 +12,11 @@ import json
 import time
 import sys
 from pathlib import Path
+
+# Asegurar que podemos importar desde el mismo directorio
+script_dir = Path(__file__).parent
+sys.path.insert(0, str(script_dir))
+
 from process_sprites import SpriteAnimationPipeline
 
 def process_batch(config_file='batch_config.json', output_root='batch_output'):
@@ -55,7 +60,7 @@ def process_batch(config_file='batch_config.json', output_root='batch_output'):
     print("🚀 Inicializando pipeline (se carga una sola vez para todo el batch)...\n")
     pipeline = SpriteAnimationPipeline(
         rembg_model=config.get('rembg_model', 'u2net'),
-        rife_model_path=config.get('rife_model', 'train_log/flownet.pkl')
+        rife_model_path=config.get('rife_model', None)  # None = auto-detectar
     )
 
     results = []
@@ -139,7 +144,6 @@ def create_example_config():
     """
     example = {
         "rembg_model": "u2net",
-        "rife_model": "train_log/flownet.pkl",
         "animations": [
             {
                 "name": "walk_right",

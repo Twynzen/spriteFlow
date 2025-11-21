@@ -1,0 +1,119 @@
+========================================
+  SPRITEFLOW - GUIA DE USO RAPIDA
+========================================
+
+## PASOS PARA USAR:
+
+1. Activa el entorno virtual:
+
+   .venv\Scripts\activate
+
+
+2. Ejecuta el menu:
+
+   python spriteflow_menu.py
+
+
+3. En el menu, selecciona:
+
+   [1] Procesar imagenes
+
+
+4. El programa buscara automaticamente 2 imagenes en:
+
+   spriteFlow\input\
+
+   (Ya hay 2 imagenes de prueba: test_start.png y test_end.png)
+
+
+5. Sigue las instrucciones:
+   - Numero de frames (presiona ENTER para 30)
+   - Remover fondo (s/n, presiona ENTER para SI)
+   - Confirmar (s/n, presiona ENTER para SI)
+
+
+6. Los resultados quedan en:
+
+   spriteFlow\output\frames\
+
+   Ahi encontraras TODOS los frames generados!
+
+
+========================================
+  FLUJO SIMPLE:
+========================================
+
+  1. Poner 2 imagenes en carpeta "input/"
+  2. Ejecutar menu (python spriteflow_menu.py)
+  3. Seleccionar opcion [1]
+  4. Confirmar
+  5. Obtener frames en carpeta "output/frames/"
+
+
+========================================
+  OPCIONES DEL MENU:
+========================================
+
+[1] Procesar imagenes
+    - Lee 2 imagenes de input/
+    - Genera frames intermedios
+    - Guarda en output/frames/
+
+[2] Ver estado de carpetas
+    - Muestra que hay en input/
+    - Muestra que hay en output/
+    - Muestra rutas completas
+
+[3] Informacion del sistema
+    - Estado de GPU
+    - Modelos instalados
+    - Version Python/PyTorch
+
+[0] Salir
+
+
+========================================
+  NOTAS IMPORTANTES:
+========================================
+
+- Las imagenes en input/ se usan en ORDEN ALFABETICO
+- Si hay mas de 2 imagenes, usa las primeras 2
+- La carpeta output/ se LIMPIA cada vez que procesas
+- Mas frames = animacion mas suave (pero mas lento)
+- GPU detectada: RTX 3070 (procesamiento rapido!)
+
+
+========================================
+  EJEMPLO DE USO:
+========================================
+
+C:\...\spriteFlow> .venv\Scripts\activate
+
+(spriteFlow) C:\...\spriteFlow> python spriteflow_menu.py
+
+  [1] Procesar imagenes (lee de carpeta 'input/')
+  [2] Ver estado de carpetas input/output
+  [3] Informacion del sistema
+  [0] Salir
+
+Selecciona opcion: 1
+
+Imagenes detectadas:
+  INICIO: test_start.png
+  FIN:    test_end.png
+
+Numero de frames [30]: [ENTER]
+
+Remover fondo (s/n) [s]: [ENTER]
+
+Iniciar procesamiento? (s/n) [s]: [ENTER]
+
+PROCESANDO...
+
+EXITO! Los frames estan en:
+  C:\...\spriteFlow\output\frames\
+
+
+========================================
+  FIN DE LA GUIA
+========================================

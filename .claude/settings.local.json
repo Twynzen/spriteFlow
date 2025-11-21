@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venvScriptspython.exe -m pip uninstall -y onnxruntime)",
+      "Bash(.venv/Scripts/python.exe -m pip:*)",
+      "Bash(uv pip uninstall:*)",
+      "Bash(uv pip list:*)",
+      "Bash(uv pip install:*)",
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(../.venv/Scripts/python.exe:*)",
+      "WebSearch",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
