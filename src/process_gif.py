@@ -3,6 +3,7 @@
 """
 SpriteFlow - GIF to Sprites Processor
 Convierte GIFs en sprites individuales con fondo removido
+Incluye mejoras para sprites: isnet-anime + limpieza de alpha + color key
 """
 
 import os
@@ -14,20 +15,47 @@ from rembg import remove, new_session
 import torch
 
 class GifToSpritesProcessor:
-    def __init__(self, rembg_model='u2net', device='cuda'):
+    def __init__(self, rembg_model='isnet-anime', device='cuda',
+                 alpha_threshold=128, clean_alpha=True,
+                 use_color_key=False, color_key_color='white', color_key_tolerance=30):
         """
         Inicializar procesador de GIF a Sprites
 
         Args:
-            rembg_model: Modelo rembg a usar (u2net, isnet-anime, etc)
+            rembg_model: Modelo rembg a usar (isnet-anime recomendado para sprites)
             device: 'cuda' o 'cpu'
+            alpha_threshold: Umbral para limpiar alpha (0-255). Pixels con alpha < threshold = transparente
+            clean_alpha: Si True, aplica limpieza de alpha para eliminar residuos
+            use_color_key: Si True, usa color key en vez de rembg (más rápido para fondos sólidos)
+            color_key_color: 'white', 'black', o tuple RGB
+            color_key_tolerance: Tolerancia para color key (0-255)
         """
         self.device = device
+        self.alpha_threshold = alpha_threshold
+        self.clean_alpha = clean_alpha
+        self.use_color_key = use_color_key
+        self.color_key_tolerance = color_key_tolerance
+
+        # Parsear color key
+        if color_key_color == 'white':
+            self.color_key_rgb = (255, 255, 255)
+        elif color_key_color == 'black':
+            self.color_key_rgb = (0, 0, 0)
+        else:
+            self.color_key_rgb = color_key_color
+
         print(f"Inicializando GIF Processor en {device}...")
 
-        # Cargar rembg session
-        print(f"Cargando rembg ({rembg_model})...")
-        self.rembg_session = new_session(rembg_model)
+        if not use_color_key:
+            # Cargar rembg session
+            print(f"Cargando rembg ({rembg_model})...")
+            self.rembg_session = new_session(rembg_model)
+        else:
+            print(f"Usando Color Key: {color_key_color} (tolerancia: {color_key_tolerance})")
+            self.rembg_session = None
+
+        if clean_alpha:
+            print(f"Limpieza de alpha activada (threshold: {alpha_threshold})")
 
         print("Procesador listo!\n")
 
@@ -118,6 +146,69 @@ class GifToSpritesProcessor:
             print(f"Error extrayendo frames: {e}")
             return []
 
+    def clean_alpha_channel(self, image):
+        """
+        Limpiar canal alpha eliminando residuos semi-transparentes
+
+        Args:
+            image: PIL.Image en modo RGBA
+
+        Returns:
+            PIL.Image con alpha limpio
+        """
+        if image.mode != 'RGBA':
+            return image
+
+        # Convertir a numpy array
+        img_array = np.array(image)
+
+        # Obtener canal alpha
+        alpha = img_array[:, :, 3]
+
+        # Aplicar threshold: pixels con alpha < threshold = 0 (transparente)
+        # pixels con alpha >= threshold = 255 (opaco)
+        alpha_clean = np.where(alpha < self.alpha_threshold, 0, 255).astype(np.uint8)
+
+        # Reemplazar canal alpha
+        img_array[:, :, 3] = alpha_clean
+
+        return Image.fromarray(img_array, 'RGBA')
+
+    def remove_background_color_key(self, image):
+        """
+        Remover fondo usando color key (chroma key)
+        Ideal para fondos de color sólido (blanco, negro, verde, etc.)
+
+        Args:
+            image: PIL.Image objeto
+
+        Returns:
+            PIL.Image con fondo removido (RGBA)
+        """
+        # Convertir a RGBA
+        if image.mode != 'RGBA':
+            image = image.convert('RGBA')
+
+        img_array = np.array(image)
+
+        # Calcular distancia al color key para cada pixel
+        r, g, b = self.color_key_rgb
+        diff = np.sqrt(
+            (img_array[:, :, 0].astype(float) - r) ** 2 +
+            (img_array[:, :, 1].astype(float) - g) ** 2 +
+            (img_array[:, :, 2].astype(float) - b) ** 2
+        )
+
+        # Crear máscara: pixels cercanos al color key = transparentes
+        # Usar tolerancia escalada (sqrt(3) * tolerance para espacio RGB)
+        max_diff = self.color_key_tolerance * np.sqrt(3)
+        mask = diff < max_diff
+
+        # Aplicar máscara al canal alpha
+        img_array[:, :, 3] = np.where(mask, 0, 255).astype(np.uint8)
+
+        return Image.fromarray(img_array, 'RGBA')
+
     def remove_background(self, image):
         """
         Remover fondo de una imagen PIL
@@ -129,7 +220,17 @@ class GifToSpritesProcessor:
             PIL.Image con fondo removido (RGBA)
         """
         try:
-            output = remove(image, session=self.rembg_session)
+            if self.use_color_key:
+                # Usar color key (más rápido para fondos sólidos)
+                output = self.remove_background_color_key(image)
+            else:
+                # Usar rembg (IA)
+                output = remove(image, session=self.rembg_session)
+
+            # Aplicar limpieza de alpha si está activada
+            if self.clean_alpha and output is not None:
+                output = self.clean_alpha_channel(output)
+
             return output
         except Exception as e:
             print(f"Error removiendo fondo: {e}")

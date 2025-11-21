@@ -421,10 +421,34 @@ def procesar_gif():
     # Limpiar nombre (quitar caracteres invalidos)
     name_base = "".join(c for c in name_base if c.isalnum() or c in ['-', '_'])
 
+    # Preguntar metodo de remocion de fondo
+    print("\n" + "=" * 60)
+    print("METODO DE REMOCION DE FONDO")
+    print("=" * 60)
+    print("  [1] IA (isnet-anime) - Mejor para sprites/ilustraciones")
+    print("  [2] Color Key BLANCO - Rapido, fondo blanco solido")
+    print("  [3] Color Key NEGRO  - Rapido, fondo negro solido")
+    print("=" * 60)
+
+    metodo = input("Selecciona metodo [1]: ").strip() or "1"
+
+    use_color_key = False
+    color_key_color = 'white'
+    rembg_model = 'isnet-anime'
+
+    if metodo == "2":
+        use_color_key = True
+        color_key_color = 'white'
+    elif metodo == "3":
+        use_color_key = True
+        color_key_color = 'black'
+
     # Limpiar carpeta output si existe
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir()
+
+    metodo_str = "Color Key " + color_key_color.upper() if use_color_key else "IA (isnet-anime)"
 
     # Mostrar resumen
     print("\n" + "=" * 60)
@@ -433,7 +457,8 @@ def procesar_gif():
     print(f"  GIF:              {gif_path.name}")
     print(f"  Frames a extraer: {num_frames}")
     print(f"  Nombre base:      {name_base}-###.png")
-    print(f"  Remover fondo:    SI (automatico)")
+    print(f"  Metodo fondo:     {metodo_str}")
+    print(f"  Limpieza alpha:   SI (threshold 128)")
     print(f"  Carpeta salida:   output/")
     print("=" * 60)
 
@@ -449,10 +474,15 @@ def procesar_gif():
     print("=" * 60 + "\n")
 
     try:
-        # Inicializar procesador
+        # Inicializar procesador con nuevas opciones
         processor = GifToSpritesProcessor(
-            rembg_model='u2net',
-            device='cuda' if torch.cuda.is_available() else 'cpu'
+            rembg_model=rembg_model,
+            device='cuda' if torch.cuda.is_available() else 'cpu',
+            alpha_threshold=128,
+            clean_alpha=True,
+            use_color_key=use_color_key,
+            color_key_color=color_key_color,
+            color_key_tolerance=30
         )
 
         # Procesar
@@ -751,9 +781,12 @@ def flujo_rapido():
     output_dir.mkdir()
 
     try:
+        # Usar isnet-anime con limpieza de alpha (mejores resultados para sprites)
         processor = GifToSpritesProcessor(
-            rembg_model='u2net',
-            device='cuda' if torch.cuda.is_available() else 'cpu'
+            rembg_model='isnet-anime',
+            device='cuda' if torch.cuda.is_available() else 'cpu',
+            alpha_threshold=128,
+            clean_alpha=True
         )
 
         result = processor.process_gif(
