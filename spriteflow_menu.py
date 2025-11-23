@@ -729,8 +729,8 @@ def flujo_rapido():
     gif_fps = 15
     gif_width = 480
     num_frames = 30
-    # Crop automatico para eliminar marca de agua (esquina inferior derecha)
-    crop_margins = (0, 40, 40, 0)  # top, right, bottom, left
+    # Crop automatico simetrico para eliminar marca de agua y centrar sprite
+    crop_margins = (40, 40, 40, 40)  # top, right, bottom, left
 
     # Mostrar resumen
     print("\n" + "=" * 60)
@@ -742,7 +742,7 @@ def flujo_rapido():
     print(f"  GIF Ancho:       {gif_width}px")
     print(f"  Frames extraer:  {num_frames}")
     print(f"  Nombre sprites:  {video_name}-###.png")
-    print(f"  Recorte bordes:  40px (inferior-derecha, quita watermark)")
+    print(f"  Recorte bordes:  40px (todos los lados, quita watermark)")
     print("=" * 60)
 
     confirmar = input("\nEjecutar flujo rapido? (s/n) [s]: ").strip().lower() or "s"
