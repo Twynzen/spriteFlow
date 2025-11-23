@@ -443,12 +443,48 @@ def procesar_gif():
         use_color_key = True
         color_key_color = 'black'
 
+    # Preguntar si quiere recortar bordes (para eliminar marcas de agua)
+    print("\n" + "=" * 60)
+    print("RECORTE DE BORDES (opcional)")
+    print("=" * 60)
+    print("Util para eliminar marcas de agua en esquinas.")
+    print("  [1] Sin recorte")
+    print("  [2] Recorte automatico (40px inferior-derecha)")
+    print("  [3] Recorte personalizado")
+    print("=" * 60)
+
+    crop_opcion = input("Selecciona opcion [1]: ").strip() or "1"
+
+    crop_margins = None
+    if crop_opcion == "2":
+        # Recorte automatico para marca de agua tipica en esquina inferior derecha
+        crop_margins = (0, 40, 40, 0)  # top, right, bottom, left
+    elif crop_opcion == "3":
+        print("\nIngresa pixeles a recortar de cada lado:")
+        try:
+            crop_top = int(input("  Arriba [0]: ").strip() or "0")
+            crop_right = int(input("  Derecha [0]: ").strip() or "0")
+            crop_bottom = int(input("  Abajo [0]: ").strip() or "0")
+            crop_left = int(input("  Izquierda [0]: ").strip() or "0")
+            if crop_top > 0 or crop_right > 0 or crop_bottom > 0 or crop_left > 0:
+                crop_margins = (crop_top, crop_right, crop_bottom, crop_left)
+        except ValueError:
+            print("Valores invalidos, se omite recorte.")
+            crop_margins = None
+
     # Limpiar carpeta output si existe
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir()
 
     metodo_str = "Color Key " + color_key_color.upper() if use_color_key else "IA (isnet-anime)"
+
+    # Formatear string de crop para resumen
+    if crop_margins:
+        top, right, bottom, left = crop_margins
+        crop_str = f"SI (t={top}, r={right}, b={bottom}, l={left})"
+    else:
+        crop_str = "NO"
 
     # Mostrar resumen
     print("\n" + "=" * 60)
@@ -459,6 +495,7 @@ def procesar_gif():
     print(f"  Nombre base:      {name_base}-###.png")
     print(f"  Metodo fondo:     {metodo_str}")
     print(f"  Limpieza alpha:   SI (threshold 128)")
+    print(f"  Recorte bordes:   {crop_str}")
     print(f"  Carpeta salida:   output/")
     print("=" * 60)
 
@@ -482,7 +519,8 @@ def procesar_gif():
             clean_alpha=True,
             use_color_key=use_color_key,
             color_key_color=color_key_color,
-            color_key_tolerance=30
+            color_key_tolerance=30,
+            crop_margins=crop_margins
         )
 
         # Procesar
@@ -691,6 +729,8 @@ def flujo_rapido():
     gif_fps = 15
     gif_width = 480
     num_frames = 30
+    # Crop automatico para eliminar marca de agua (esquina inferior derecha)
+    crop_margins = (0, 40, 40, 0)  # top, right, bottom, left
 
     # Mostrar resumen
     print("\n" + "=" * 60)
@@ -702,6 +742,7 @@ def flujo_rapido():
     print(f"  GIF Ancho:       {gif_width}px")
     print(f"  Frames extraer:  {num_frames}")
     print(f"  Nombre sprites:  {video_name}-###.png")
+    print(f"  Recorte bordes:  40px (inferior-derecha, quita watermark)")
     print("=" * 60)
 
     confirmar = input("\nEjecutar flujo rapido? (s/n) [s]: ").strip().lower() or "s"
@@ -782,6 +823,7 @@ def flujo_rapido():
 
     try:
         # Usar Color Key Negro para fondo negro (mas rapido que IA)
+        # Con crop automatico para eliminar marca de agua
         processor = GifToSpritesProcessor(
             rembg_model='isnet-anime',
             device='cuda' if torch.cuda.is_available() else 'cpu',
@@ -789,7 +831,8 @@ def flujo_rapido():
             clean_alpha=True,
             use_color_key=True,
             color_key_color='black',
-            color_key_tolerance=30
+            color_key_tolerance=30,
+            crop_margins=crop_margins
         )
 
         result = processor.process_gif(

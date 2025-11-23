@@ -17,7 +17,8 @@ import torch
 class GifToSpritesProcessor:
     def __init__(self, rembg_model='isnet-anime', device='cuda',
                  alpha_threshold=128, clean_alpha=True,
-                 use_color_key=False, color_key_color='white', color_key_tolerance=30):
+                 use_color_key=False, color_key_color='white', color_key_tolerance=30,
+                 crop_margins=None):
         """
         Inicializar procesador de GIF a Sprites
 
@@ -29,12 +30,15 @@ class GifToSpritesProcessor:
             use_color_key: Si True, usa color key en vez de rembg (más rápido para fondos sólidos)
             color_key_color: 'white', 'black', o tuple RGB
             color_key_tolerance: Tolerancia para color key (0-255)
+            crop_margins: Tuple (top, right, bottom, left) en pixeles para recortar bordes.
+                          None = sin recorte. Util para eliminar marcas de agua en esquinas.
         """
         self.device = device
         self.alpha_threshold = alpha_threshold
         self.clean_alpha = clean_alpha
         self.use_color_key = use_color_key
         self.color_key_tolerance = color_key_tolerance
+        self.crop_margins = crop_margins
 
         # Parsear color key
         if color_key_color == 'white':
@@ -57,7 +61,40 @@ class GifToSpritesProcessor:
         if clean_alpha:
             print(f"Limpieza de alpha activada (threshold: {alpha_threshold})")
 
+        if crop_margins:
+            top, right, bottom, left = crop_margins
+            print(f"Recorte de bordes activado: top={top}, right={right}, bottom={bottom}, left={left}")
+
         print("Procesador listo!\n")
+
+    def crop_image(self, image):
+        """
+        Recortar bordes de una imagen segun crop_margins
+
+        Args:
+            image: PIL.Image objeto
+
+        Returns:
+            PIL.Image recortada (o la original si no hay crop_margins)
+        """
+        if not self.crop_margins:
+            return image
+
+        top, right, bottom, left = self.crop_margins
+        width, height = image.size
+
+        # Calcular nueva region de crop
+        new_left = left
+        new_top = top
+        new_right = width - right
+        new_bottom = height - bottom
+
+        # Validar que el crop sea valido
+        if new_right <= new_left or new_bottom <= new_top:
+            print(f"  ADVERTENCIA: Margenes de crop invalidos, se omite recorte")
+            return image
+
+        return image.crop((new_left, new_top, new_right, new_bottom))
 
     def get_gif_info(self, gif_path):
         """
@@ -137,8 +174,13 @@ class GifToSpritesProcessor:
                 gif.seek(idx)
                 # Convertir a RGB (los GIFs pueden tener paleta)
                 frame = gif.convert('RGB')
+                # Aplicar crop si esta configurado
+                frame = self.crop_image(frame)
                 frames.append(frame)
 
+            if self.crop_margins:
+                top, right, bottom, left = self.crop_margins
+                print(f"Crop aplicado: -{top}px arriba, -{right}px derecha, -{bottom}px abajo, -{left}px izquierda")
             print(f"Frames extraidos exitosamente!\n")
             return frames
 
