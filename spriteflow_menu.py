@@ -781,12 +781,15 @@ def flujo_rapido():
     output_dir.mkdir()
 
     try:
-        # Usar isnet-anime con limpieza de alpha (mejores resultados para sprites)
+        # Usar Color Key Negro para fondo negro (mas rapido que IA)
         processor = GifToSpritesProcessor(
             rembg_model='isnet-anime',
             device='cuda' if torch.cuda.is_available() else 'cpu',
             alpha_threshold=128,
-            clean_alpha=True
+            clean_alpha=True,
+            use_color_key=True,
+            color_key_color='black',
+            color_key_tolerance=30
         )
 
         result = processor.process_gif(
