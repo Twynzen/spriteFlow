@@ -12,9 +12,10 @@ import subprocess
 import shutil
 from pathlib import Path
 
-# Importar el procesador de GIFs
+# Importar el procesador de GIFs y generador de spritesheets
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 from process_gif import GifToSpritesProcessor
+from spritesheet_generator import SpritesheetGenerator
 import torch
 
 
@@ -844,7 +845,7 @@ def flujo_rapido():
 
         if result['success']:
             print("\n" + "=" * 60)
-            print("FLUJO RAPIDO COMPLETADO!")
+            print("SPRITES GENERADOS EXITOSAMENTE!")
             print("=" * 60)
             print(f"\nSprites generados: {result['frames_processed']}")
             print(f"Ubicacion: {output_dir.absolute()}")
@@ -853,11 +854,201 @@ def flujo_rapido():
                 print(f"  {i}. {Path(file_path).name}")
             if len(result['files']) > 5:
                 print(f"  ... y {len(result['files']) - 5} mas")
+
+            # ========== PASO 3 (OPCIONAL): Generar Spritesheet ==========
+            print("\n" + "=" * 60)
+            generar_sheet = input("\nGenerar spritesheet? (s/n) [s]: ").strip().lower() or "s"
+
+            if generar_sheet == "s":
+                print("\n" + "=" * 60)
+                print("PASO 3/3 (OPCIONAL): Generando spritesheet...")
+                print("=" * 60 + "\n")
+
+                try:
+                    generator = SpritesheetGenerator(str(output_dir))
+
+                    # Usar configuracion por defecto (automatico)
+                    sheet_result = generator.process_group(
+                        prefix=video_name,
+                        columns=None,  # Automatico
+                        padding=0,
+                        generate_metadata=True,
+                        delete_frames=False
+                    )
+
+                    print("\n" + "=" * 60)
+                    print("FLUJO RAPIDO COMPLETADO CON SPRITESHEET!")
+                    print("=" * 60)
+                    print(f"\nSprites individuales: {result['frames_processed']}")
+                    print(f"Spritesheet:          {Path(sheet_result['spritesheet_path']).name}")
+                    if sheet_result['metadata_path']:
+                        print(f"Metadatos JSON:       {Path(sheet_result['metadata_path']).name}")
+                    print(f"\nUbicacion: {output_dir.absolute()}")
+
+                except Exception as e:
+                    print(f"\nError generando spritesheet: {e}")
+            else:
+                print("\n" + "=" * 60)
+                print("FLUJO RAPIDO COMPLETADO!")
+                print("=" * 60)
+                print("\nPuedes generar el spritesheet mas tarde usando la opcion [6]")
+
         else:
             print(f"\nError: {result.get('error', 'Desconocido')}")
 
     except Exception as e:
         print(f"Error procesando sprites: {e}")
+
+    pausar()
+
+
+def generar_spritesheet():
+    """Opcion 6: Generar spritesheet desde frames PNG"""
+    limpiar_pantalla()
+    mostrar_banner()
+    print("[6] Generar Spritesheet\n")
+
+    script_dir = Path(__file__).parent.resolve()
+    output_dir = script_dir / "output"
+
+    # Verificar que existe carpeta output
+    if not output_dir.exists():
+        print(f"La carpeta output no existe: {output_dir}\n")
+        print("Primero debes procesar un GIF usando la opcion [1] o [5]")
+        pausar()
+        return
+
+    # Inicializar generador
+    generator = SpritesheetGenerator(str(output_dir))
+
+    # Detectar grupos de frames
+    print("Detectando grupos de frames...")
+    grupos = generator.detect_frame_groups()
+
+    if not grupos:
+        print("\nNo se encontraron grupos de frames en la carpeta output/")
+        print("Los frames deben tener el formato: nombre-001.png, nombre-002.png, etc.")
+        pausar()
+        return
+
+    # Mostrar grupos detectados
+    print("\n" + "=" * 60)
+    print("GRUPOS DE FRAMES DETECTADOS")
+    print("=" * 60)
+
+    grupos_lista = list(grupos.keys())
+    for idx, prefix in enumerate(grupos_lista, 1):
+        info = generator.get_group_info(prefix)
+        print(f"  [{idx}] {prefix}")
+        print(f"      {info['frame_count']} frames | {info['frame_width']}x{info['frame_height']}px | {info['total_size_kb']} KB")
+
+    print("=" * 60)
+
+    # Seleccionar grupo
+    if len(grupos_lista) == 1:
+        prefix = grupos_lista[0]
+        print(f"\nSe usara el unico grupo disponible: {prefix}")
+    else:
+        try:
+            seleccion = input(f"\nSelecciona grupo [1-{len(grupos_lista)}]: ").strip()
+            idx_seleccion = int(seleccion) - 1
+            if idx_seleccion < 0 or idx_seleccion >= len(grupos_lista):
+                print("Seleccion invalida")
+                pausar()
+                return
+            prefix = grupos_lista[idx_seleccion]
+        except ValueError:
+            print("Entrada invalida")
+            pausar()
+            return
+
+    info = generator.get_group_info(prefix)
+
+    # Opciones de configuracion
+    print("\n" + "=" * 60)
+    print("CONFIGURACION DEL SPRITESHEET")
+    print("=" * 60)
+
+    # Columnas
+    default_cols = generator.calculate_grid(info['frame_count'])[0]
+    print(f"\nNumero de columnas (automatico: {default_cols})")
+    try:
+        cols_input = input(f"Columnas [{default_cols}]: ").strip()
+        columnas = int(cols_input) if cols_input else None
+        if columnas is not None and columnas < 1:
+            columnas = None
+    except ValueError:
+        columnas = None
+
+    # Padding
+    print("\nEspacio entre frames (padding)")
+    try:
+        padding_input = input("Pixeles de padding [0]: ").strip()
+        padding = int(padding_input) if padding_input else 0
+        padding = max(0, padding)
+    except ValueError:
+        padding = 0
+
+    # Eliminar frames originales
+    print("\nEliminar frames originales despues de generar spritesheet?")
+    eliminar = input("Eliminar frames? (s/n) [n]: ").strip().lower() or "n"
+    delete_frames = (eliminar == "s")
+
+    # Calcular dimensiones del spritesheet resultante
+    cols_final, rows_final = generator.calculate_grid(info['frame_count'], columnas)
+    width_final = (info['frame_width'] * cols_final) + (padding * (cols_final - 1))
+    height_final = (info['frame_height'] * rows_final) + (padding * (rows_final - 1))
+
+    # Mostrar resumen
+    print("\n" + "=" * 60)
+    print("RESUMEN")
+    print("=" * 60)
+    print(f"  Grupo:           {prefix}")
+    print(f"  Frames:          {info['frame_count']}")
+    print(f"  Frame size:      {info['frame_width']}x{info['frame_height']}px")
+    print(f"  Grid:            {cols_final} columnas x {rows_final} filas")
+    print(f"  Padding:         {padding}px")
+    print(f"  Spritesheet:     {width_final}x{height_final}px")
+    print(f"  Salida:          {prefix}_spritesheet.png")
+    print(f"  Metadatos JSON:  SI")
+    print(f"  Eliminar frames: {'SI' if delete_frames else 'NO'}")
+    print("=" * 60)
+
+    confirmar = input("\nGenerar spritesheet? (s/n) [s]: ").strip().lower() or "s"
+    if confirmar != "s":
+        print("\nCancelado.")
+        pausar()
+        return
+
+    # Generar spritesheet
+    print("\n" + "=" * 60)
+    print("GENERANDO SPRITESHEET...")
+    print("=" * 60 + "\n")
+
+    try:
+        result = generator.process_group(
+            prefix=prefix,
+            columns=columnas,
+            padding=padding,
+            generate_metadata=True,
+            delete_frames=delete_frames
+        )
+
+        print("\n" + "=" * 60)
+        print("SPRITESHEET GENERADO EXITOSAMENTE!")
+        print("=" * 60)
+        print(f"\nFrames procesados: {result['frame_count']}")
+        print(f"Archivo:           {Path(result['spritesheet_path']).name}")
+        print(f"Ubicacion:         {output_dir.absolute()}")
+        if result['metadata_path']:
+            print(f"Metadatos:         {Path(result['metadata_path']).name}")
+        if result['frames_deleted']:
+            print(f"\nFrames originales eliminados")
+
+    except Exception as e:
+        print(f"\nError generando spritesheet: {e}")
+        import traceback
+        traceback.print_exc()
 
     pausar()
 
@@ -875,6 +1066,7 @@ def menu_principal():
         print("  [3] Ver estado de carpetas input/output")
         print("  [4] Informacion del sistema")
         print("  [5] FLUJO RAPIDO: MP4 -> Sprites (todo automatico)")
+        print("  [6] Generar Spritesheet desde frames PNG")
         print("  [0] Salir")
         print("=" * 60)
         print()
@@ -891,13 +1083,15 @@ def menu_principal():
             configuracion()
         elif opcion == "5":
             flujo_rapido()
+        elif opcion == "6":
+            generar_spritesheet()
         elif opcion == "0":
             limpiar_pantalla()
             print("Gracias por usar SpriteFlow!")
             print()
             break
         else:
-            print("\nOpcion invalida. Usa 1, 2, 3, 4, 5 o 0")
+            print("\nOpcion invalida. Usa 1, 2, 3, 4, 5, 6 o 0")
             pausar()
 
 if __name__ == "__main__":
